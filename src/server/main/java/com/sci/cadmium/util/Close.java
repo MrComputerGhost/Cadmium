@@ -16,6 +16,10 @@ public final class Close
 	{
 	}
 
+	/**
+	 * Close any closeable object quietly 
+	 * @param c
+	 */
 	public static void quiet(Closeable c)
 	{
 		if(c == null)

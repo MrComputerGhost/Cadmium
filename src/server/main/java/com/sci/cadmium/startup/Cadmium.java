@@ -11,6 +11,9 @@ import java.util.logging.Logger;
 
 public final class Cadmium
 {
+	/**
+	 * Cadmium instance
+	 */
 	public static final Cadmium INSTANCE = new Cadmium();
 
 	private Logger log;
@@ -20,6 +23,10 @@ public final class Cadmium
 		this.log = Logger.getLogger("Cadmium");
 	}
 
+	/**
+	 * Get the Cadmium root logger
+	 * @return
+	 */
 	public Logger getLog()
 	{
 		return this.log;

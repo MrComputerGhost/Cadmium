@@ -36,6 +36,9 @@ public class Configuration
 		this.log.setParent(Cadmium.INSTANCE.getLog());
 	}
 
+	/**
+	 * Loads configuration from file
+	 */
 	public void load()
 	{
 		Map<String, String> properties = new HashMap<String, String>();
@@ -121,6 +124,9 @@ public class Configuration
 		}
 	}
 
+	/**
+	 * Saves configuration to file
+	 */
 	public void save()
 	{
 		Map<String, String> properties = new HashMap<String, String>();
