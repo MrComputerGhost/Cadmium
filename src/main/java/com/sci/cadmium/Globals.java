@@ -12,6 +12,11 @@ public final class Globals
 	private Globals()
 	{
 	}
+	
+	/**
+	 * Size of UDT packet buffers
+	 */
+	public static final int PACKET_BUFFER_SIZE = 1024;
 
 	/**
 	 * System property for the home location of Cadmium

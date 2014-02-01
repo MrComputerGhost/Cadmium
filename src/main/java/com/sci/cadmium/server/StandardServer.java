@@ -1,12 +1,20 @@
 package com.sci.cadmium.server;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.sci.cadmium.Globals;
 import com.sci.cadmium.Server;
 import com.sci.cadmium.config.Configuration;
+import com.sci.cadmium.packet.Packet;
 
 /**
  * Cadmium
@@ -43,6 +51,16 @@ public class StandardServer implements Server
 	private boolean stopping;
 
 	/**
+	 * UDP socket for server to communuicate on
+	 */
+	private DatagramSocket socket;
+
+	/**
+	 * Main server thread
+	 */
+	private Thread thread;
+
+	/**
 	 * Standard Cadmium server
 	 * 
 	 * @param cadmiumHome
@@ -52,6 +70,7 @@ public class StandardServer implements Server
 		this.cadmiumHome = new File(cadmiumHome);
 		this.config = new ServerConfig();
 		this.log = Logger.getLogger("Cadmium");
+		this.thread = new Thread(this, "Cadmium");
 	}
 
 	@Override
@@ -86,10 +105,24 @@ public class StandardServer implements Server
 
 		if(first)
 		{
+			this.log.log(Level.INFO, "Generated default config file!");
 			configuration.write(ServerConfig.DEFAULTS);
 		}
 
 		configuration.load();
+
+		try
+		{
+			this.socket = new DatagramSocket(this.config.getServerPort());
+		}
+		catch(SocketException e)
+		{
+			this.log.log(Level.SEVERE, "Could not bind port!", e);
+			System.exit(1);
+		}
+
+		this.running = true;
+		this.thread.start();
 	}
 
 	@Override
@@ -102,16 +135,46 @@ public class StandardServer implements Server
 	@Override
 	public void run()
 	{
+		try
+		{
+			this.log.log(Level.INFO, "Listening on UDP:" + InetAddress.getLocalHost().getHostAddress() + ":" + this.config.getServerPort());
+		}
+		catch(UnknownHostException e)
+		{
+			this.log.log(Level.SEVERE, "Unable to get localhost!", e);
+			System.exit(1);
+		}
+
 		while(this.running)
 		{
 			if(this.stopping)
 			{
-				
+
 			}
 			else
 			{
-				
+				try
+				{
+					byte[] data = new byte[Globals.PACKET_BUFFER_SIZE];
+					DatagramPacket packet = new DatagramPacket(data, data.length);
+					this.socket.receive(packet);
+					InetAddress ip = packet.getAddress();
+					data = packet.getData();
+					DataInputStream din = new DataInputStream(new ByteArrayInputStream(data));
+					int packetID = din.readInt();
+					Packet pkt = Packet.createPacket(packetID);
+					handlePacket(ip, pkt);
+				}
+				catch(Exception e)
+				{
+					this.log.log(Level.WARNING, "An error occured receiving packet!", e);
+				}
 			}
 		}
+	}
+
+	public void handlePacket(InetAddress ip, Packet pkt)
+	{
+
 	}
 }
