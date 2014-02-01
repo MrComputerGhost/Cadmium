@@ -17,4 +17,9 @@ public final class Globals
 	 * System property for the home location of Cadmium
 	 */
 	public static final String CADMIUM_HOME_PROPERTY = "cadmium.home";
+	
+	/**
+	 * Server configuration file 
+	 */
+	public static final String SERVER_CONFIG = "server.cfg";
 }

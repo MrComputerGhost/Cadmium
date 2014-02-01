@@ -12,7 +12,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.sci.cadmium.startup.Cadmium;
 import com.sci.cadmium.util.Close;
 
 /**
@@ -33,7 +32,6 @@ public class Configuration
 		this.file = file;
 		this.obj = obj;
 		this.log = Logger.getLogger("Configuration");
-		this.log.setParent(Cadmium.INSTANCE.getLog());
 	}
 
 	/**

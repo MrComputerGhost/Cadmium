@@ -1,6 +1,8 @@
 package com.sci.cadmium.startup;
 
-import java.util.logging.Logger;
+import com.sci.cadmium.Globals;
+import com.sci.cadmium.Server;
+import com.sci.cadmium.server.StandardServer;
 
 /**
  * Cadmium
@@ -12,23 +14,20 @@ import java.util.logging.Logger;
 public final class Cadmium
 {
 	/**
-	 * Cadmium instance
+	 * The server instance
 	 */
-	public static final Cadmium INSTANCE = new Cadmium();
+	private static Server server = null;
 
-	private Logger log;
-
-	private Cadmium()
+	public static void main(String[] args)
 	{
-		this.log = Logger.getLogger("Cadmium");
-	}
+		String cadmiumHome = System.getProperty(Globals.CADMIUM_HOME_PROPERTY);
+		if(cadmiumHome == null)
+		{
+			System.err.println("cadmium.home must be set!");
+			System.exit(1);
+		}
 
-	/**
-	 * Get the Cadmium root logger
-	 * @return
-	 */
-	public Logger getLog()
-	{
-		return this.log;
+		Cadmium.server = new StandardServer(cadmiumHome);
+		Cadmium.server.start();
 	}
 }
