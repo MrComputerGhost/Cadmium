@@ -17,7 +17,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.sci.cadmium.common.Globals;
 import com.sci.cadmium.common.config.Configuration;
-import com.sci.cadmium.common.packet.ByteScrambler;
 import com.sci.cadmium.common.packet.Packet;
 import com.sci.cadmium.common.packet.Packet0Connect;
 import com.sci.cadmium.common.packet.Packet1Disconnect;
@@ -174,7 +173,7 @@ public final class StandardServer implements Server
 					DatagramPacket packet = new DatagramPacket(data, data.length);
 					this.socket.receive(packet);
 					InetAddress ip = packet.getAddress();
-					data = ByteScrambler.unscramble(packet.getData());
+					data = packet.getData();
 					DataInputStream din = new DataInputStream(new ByteArrayInputStream(data));
 					int packetID = din.readInt();
 					Packet pkt = Packet.createPacket(packetID);
@@ -223,7 +222,7 @@ public final class StandardServer implements Server
 			dout.writeInt(pkt.getID());
 			pkt.write(dout);
 
-			byte[] data = ByteScrambler.scramble(baos.toByteArray());
+			byte[] data = baos.toByteArray();
 			this.socket.send(new DatagramPacket(data, data.length, client.getIpAddress(), client.getPort()));
 		}
 		catch(IOException e)

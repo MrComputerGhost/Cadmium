@@ -25,7 +25,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import com.sci.cadmium.common.Globals;
-import com.sci.cadmium.common.packet.ByteScrambler;
 import com.sci.cadmium.common.packet.Packet;
 import com.sci.cadmium.common.packet.Packet0Connect;
 import com.sci.cadmium.common.packet.Packet1Disconnect;
@@ -329,7 +328,7 @@ public final class CadmiumClient implements Runnable
 			dout.writeInt(pkt.getID());
 			pkt.write(dout);
 
-			byte[] data = ByteScrambler.scramble(baos.toByteArray());
+			byte[] data = baos.toByteArray();
 			this.socket.send(new DatagramPacket(data, data.length, this.ip, this.port));
 
 			dout.close();
@@ -348,14 +347,14 @@ public final class CadmiumClient implements Runnable
 		{
 			if(!this.connected)
 				continue;
-			
+
 			try
 			{
 				byte[] data = new byte[Globals.PACKET_BUFFER_SIZE];
 				DatagramPacket packet = new DatagramPacket(data, data.length);
 				this.socket.receive(packet);
 				InetAddress ip = packet.getAddress();
-				data = ByteScrambler.unscramble(packet.getData());
+				data = packet.getData();
 				DataInputStream din = new DataInputStream(new ByteArrayInputStream(data));
 				int packetID = din.readInt();
 				Packet pkt = Packet.createPacket(packetID);
@@ -375,13 +374,13 @@ public final class CadmiumClient implements Runnable
 		if(pkt instanceof Packet2Message)
 		{
 			Packet2Message packetMessage = (Packet2Message) pkt;
-			
+
 			onChatMessage(packetMessage.getUsername(), packetMessage.getMessage());
 		}
 		else if(pkt instanceof Packet3Kick)
 		{
 			Packet3Kick packetKick = (Packet3Kick) pkt;
-			
+
 			onChatMessage("SERVER", packetKick.getMessage());
 			disconnect();
 		}
