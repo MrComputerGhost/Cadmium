@@ -413,37 +413,30 @@ public final class StandardServer implements Server
 		{
 			if(client.getLevel() == 2)
 			{
-				if(client.getLevel() == 2)
+				if(arguments.length == 2 || arguments.length == 3)
 				{
-					if(arguments.length == 2 || arguments.length == 3)
+					if(!client.getUsername().equals(arguments[1]))
 					{
-						if(!client.getUsername().equals(arguments[1]))
+						Client c = getClient(arguments[1]);
+						if(c != null)
 						{
-							Client c = getClient(arguments[1]);
-							if(c != null)
-							{
-								sendPacket(c, new Packet3Kick(arguments.length == 3 ? arguments[2] : "You were kicked from the server!"));
-								this.clients.remove(c);
-								broadcast(new Packet2Message("SERVER", c.getUsername() + " was kicked from the server!"));
-							}
-							else
-							{
-								sendPacket(client, new Packet2Message("SERVER", "User not found!"));
-							}
+							sendPacket(c, new Packet3Kick(arguments.length == 3 ? arguments[2] : "You were kicked from the server!"));
+							this.clients.remove(c);
+							broadcast(new Packet2Message("SERVER", c.getUsername() + " was kicked from the server!"));
 						}
 						else
 						{
-							sendPacket(client, new Packet2Message("SERVER", "You cannot kick yourself!"));
+							sendPacket(client, new Packet2Message("SERVER", "User not found!"));
 						}
 					}
 					else
 					{
-						sendPacket(client, new Packet2Message("SERVER", "Usage: /kick <name>"));
+						sendPacket(client, new Packet2Message("SERVER", "You cannot kick yourself!"));
 					}
 				}
 				else
 				{
-					sendPacket(client, new Packet2Message("SERVER", "You do not have permission to do that!"));
+					sendPacket(client, new Packet2Message("SERVER", "Usage: /kick <name>"));
 				}
 			}
 			else
