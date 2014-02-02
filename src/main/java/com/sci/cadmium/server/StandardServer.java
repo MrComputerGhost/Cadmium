@@ -323,7 +323,7 @@ public final class StandardServer implements Server
 				this.log.log(Level.INFO, c.getUsername() + " disconnected!");
 			}
 		}
-		else if(pkt instanceof Packet2Message) // TODO commands
+		else if(pkt instanceof Packet2Message) 
 		{
 			Packet2Message messagePacket = (Packet2Message) pkt;
 			if(messagePacket.getMessage().startsWith("/"))
