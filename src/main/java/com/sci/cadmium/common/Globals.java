@@ -1,4 +1,4 @@
-package com.sci.cadmium.server;
+package com.sci.cadmium.common;
 
 /**
  * Cadmium

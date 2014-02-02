@@ -3,9 +3,13 @@ package com.sci.cadmium.client;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -20,9 +24,12 @@ import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import com.sci.cadmium.common.Globals;
 import com.sci.cadmium.common.packet.Packet;
 import com.sci.cadmium.common.packet.Packet0Connect;
 import com.sci.cadmium.common.packet.Packet1Disconnect;
+import com.sci.cadmium.common.packet.Packet2Message;
+import com.sci.cadmium.common.packet.Packet3Kick;
 
 /**
  * Cadmium
@@ -31,7 +38,7 @@ import com.sci.cadmium.common.packet.Packet1Disconnect;
  * @license Lesser GNU Public License v3 (http://www.gnu.org/licenses/lgpl.html)
  */
 
-public final class CadmiumClient
+public final class CadmiumClient implements Runnable
 {
 	public static void main(String[] args)
 	{
@@ -112,6 +119,16 @@ public final class CadmiumClient
 	 * Is the client connected to a servetr or not
 	 */
 	private boolean connected;
+
+	/**
+	 * Is the client running
+	 */
+	private boolean running;
+
+	/**
+	 * Cadmium client thread
+	 */
+	private Thread thread;
 
 	private CadmiumClient()
 	{
@@ -210,19 +227,52 @@ public final class CadmiumClient
 
 		this.chatField = new JTextField();
 		this.chatField.setEditable(false);
+		this.chatField.addKeyListener(new KeyListener()
+		{
+			@Override
+			public void keyPressed(KeyEvent e)
+			{
+				if(e.getKeyCode() == KeyEvent.VK_ENTER && CadmiumClient.this.connected)
+				{
+					String text = CadmiumClient.this.chatField.getText();
+					CadmiumClient.this.sendPacket(new Packet2Message(CadmiumClient.this.username, text));
+					CadmiumClient.this.onChatMessage(CadmiumClient.this.username, text);
+					CadmiumClient.this.chatField.setText("");
+				}
+			}
+
+			@Override
+			public void keyReleased(KeyEvent e)
+			{
+			}
+
+			@Override
+			public void keyTyped(KeyEvent e)
+			{
+			}
+		});
 		this.frame.add(this.chatField, BorderLayout.SOUTH);
+
+		this.thread = new Thread(this, "Cadmium-Client");
+	}
+
+	public void onChatMessage(String username, String message)
+	{
+		this.chatArea.setText(this.chatArea.getText() + "\n" + username + ": " + message);
 	}
 
 	public void start()
 	{
 		this.frame.setVisible(true);
+		this.running = true;
+		this.thread.start();
 	}
 
 	public void stop()
 	{
 		disconnect();
 		this.frame.dispose();
-		System.exit(0);
+		this.running = false;
 	}
 
 	public void disconnect()
@@ -287,6 +337,52 @@ public final class CadmiumClient
 		catch(IOException e)
 		{
 			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void run()
+	{
+		while(this.running)
+		{
+			if(!this.connected)
+				continue;
+			
+			try
+			{
+				byte[] data = new byte[Globals.PACKET_BUFFER_SIZE];
+				DatagramPacket packet = new DatagramPacket(data, data.length);
+				this.socket.receive(packet);
+				InetAddress ip = packet.getAddress();
+				data = packet.getData();
+				DataInputStream din = new DataInputStream(new ByteArrayInputStream(data));
+				int packetID = din.readInt();
+				Packet pkt = Packet.createPacket(packetID);
+				pkt.read(din);
+				handlePacket(ip, packet.getPort(), pkt);
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+		System.exit(0);
+	}
+
+	private void handlePacket(InetAddress ip, int port, Packet pkt)
+	{
+		if(pkt instanceof Packet2Message)
+		{
+			Packet2Message packetMessage = (Packet2Message) pkt;
+			
+			onChatMessage(packetMessage.getUsername(), packetMessage.getMessage());
+		}
+		else if(pkt instanceof Packet3Kick)
+		{
+			Packet3Kick packetKick = (Packet3Kick) pkt;
+			
+			onChatMessage("SERVER", packetKick.getMessage());
+			disconnect();
 		}
 	}
 }

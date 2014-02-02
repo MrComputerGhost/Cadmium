@@ -13,14 +13,23 @@ import java.io.IOException;
 
 public class Packet2Message extends Packet
 {
+	/**
+	 * User who sent the message
+	 */
+	private String username;
+
+	/**
+	 * Message the user sent
+	 */
 	private String message;
 
 	public Packet2Message()
 	{
 	}
 
-	public Packet2Message(String message)
+	public Packet2Message(String username, String message)
 	{
+		this.username = username;
 		this.message = message;
 	}
 
@@ -33,13 +42,25 @@ public class Packet2Message extends Packet
 	@Override
 	public void write(DataOutputStream out) throws IOException
 	{
+		out.writeUTF(this.username);
 		out.writeUTF(this.message);
 	}
 
 	@Override
 	public void read(DataInputStream in) throws IOException
 	{
+		this.username = in.readUTF();
 		this.message = in.readUTF();
+	}
+
+	public String getUsername()
+	{
+		return username;
+	}
+
+	public void setUsername(String username)
+	{
+		this.username = username;
 	}
 
 	public String getMessage()

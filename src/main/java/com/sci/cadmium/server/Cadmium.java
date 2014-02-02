@@ -1,5 +1,7 @@
 package com.sci.cadmium.server;
 
+import com.sci.cadmium.common.Globals;
+
 
 /**
  * Cadmium

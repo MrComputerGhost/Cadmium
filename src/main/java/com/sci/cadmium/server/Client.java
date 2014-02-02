@@ -33,9 +33,8 @@ public class Client
 	 */
 	private DatagramSocket socket;
 
-	public Client(InetAddress ipAddress) throws SocketException
+	public Client() throws SocketException
 	{
-		this.ipAddress = ipAddress;
 		this.socket = new DatagramSocket();
 	}
 
@@ -52,6 +51,11 @@ public class Client
 	public void setUsername(String username)
 	{
 		this.username = username;
+	}
+
+	public void setIpAddress(InetAddress ipAddress)
+	{
+		this.ipAddress = ipAddress;
 	}
 
 	public InetAddress getIpAddress()

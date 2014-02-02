@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.sci.cadmium.common.Globals;
 import com.sci.cadmium.common.config.Configuration;
 import com.sci.cadmium.common.packet.Packet;
 import com.sci.cadmium.common.packet.Packet0Connect;
@@ -177,7 +178,7 @@ public final class StandardServer implements Server
 					int packetID = din.readInt();
 					Packet pkt = Packet.createPacket(packetID);
 					pkt.read(din);
-					handlePacket(ip, packet.getPort(), pkt);
+					handlePacket(getClient(ip, packet.getPort()), ip, packet.getPort(), pkt);
 				}
 				catch(Exception e)
 				{
@@ -199,19 +200,19 @@ public final class StandardServer implements Server
 		return null;
 	}
 
-	public Client getClient(InetAddress ip)
+	public Client getClient(InetAddress ip, int port)
 	{
 		for(Client client : this.clients)
 		{
-			if(client.getIpAddress().equals(ip))
+			if(client.getIpAddress().equals(ip) && port == client.getPort())
 				return client;
 		}
 		return null;
 	}
 
-	public void sendPacket(InetAddress ip, int port, Packet pkt) // TODO
-																	// encrypted
-																	// packets
+	public void sendPacket(Client client, Packet pkt) // TODO
+														// encrypted
+														// packets
 	{
 		try
 		{
@@ -222,7 +223,7 @@ public final class StandardServer implements Server
 			pkt.write(dout);
 
 			byte[] data = baos.toByteArray();
-			this.socket.send(new DatagramPacket(data, data.length, ip, port));
+			this.socket.send(new DatagramPacket(data, data.length, client.getIpAddress(), client.getPort()));
 		}
 		catch(IOException e)
 		{
@@ -234,39 +235,40 @@ public final class StandardServer implements Server
 	{
 		for(Client c : this.clients)
 		{
-			sendPacket(c.getIpAddress(), c.getPort(), pkt);
+			sendPacket(c, pkt);
 		}
 	}
 
-	public void broadcastToAllBut(InetAddress toSkip, Packet pkt)
+	public void broadcastToAllBut(Client toSkip, Packet pkt)
 	{
 		for(Client c : this.clients)
 		{
-			if(c.getIpAddress().equals(toSkip))
+			if(c.equals(toSkip))
 				continue;
-			sendPacket(c.getIpAddress(), c.getPort(), pkt);
+			sendPacket(c, pkt);
 		}
 	}
 
-	public void handlePacket(InetAddress ip, int port, Packet pkt)
+	public void handlePacket(Client client, InetAddress ip, int port, Packet pkt)
 	{
 		if(pkt instanceof Packet0Connect)
 		{
 			Packet0Connect connectPacket = (Packet0Connect) pkt;
 			if(getClient(connectPacket.getUsername()) != null)
 			{
-				sendPacket(ip, getClient(connectPacket.getUsername()).getPort(), new Packet3Kick("Username in use!"));
+				sendPacket(getClient(connectPacket.getUsername()), new Packet3Kick("Username in use!"));
 				return;
 			}
 
 			try
 			{
-				Client client = new Client(ip);
-				client.setUsername(connectPacket.getUsername());
-				client.setPort(port);
-				this.clients.add(client);
-				broadcastToAllBut(ip, new Packet2Message(client.getUsername() + " connected!"));
-				this.log.log(Level.INFO, client.getUsername() + " connected!");
+				Client c = new Client();
+				c.setUsername(connectPacket.getUsername());
+				c.setPort(port);
+				c.setIpAddress(ip);
+				this.clients.add(c);
+				broadcastToAllBut(c, new Packet2Message("SERVER", c.getUsername() + " connected!"));
+				this.log.log(Level.INFO, c.getUsername() + " connected!");
 			}
 			catch(IOException e)
 			{
@@ -276,19 +278,19 @@ public final class StandardServer implements Server
 		else if(pkt instanceof Packet1Disconnect)
 		{
 			Packet1Disconnect disconnectPacket = (Packet1Disconnect) pkt;
-			Client client = getClient(disconnectPacket.getUsername());
-			if(client != null)
+			Client c = getClient(disconnectPacket.getUsername());
+			if(c != null)
 			{
-				this.clients.remove(client);
-				broadcastToAllBut(ip, new Packet2Message(client.getUsername() + " disconnected!"));
-				this.log.log(Level.INFO, client.getUsername() + " disconnected!");
+				this.clients.remove(c);
+				broadcastToAllBut(c, new Packet2Message("SERVER", c.getUsername() + " disconnected!"));
+				this.log.log(Level.INFO, c.getUsername() + " disconnected!");
 			}
 		}
 		else if(pkt instanceof Packet2Message) // TODO commands
 		{
 			Packet2Message messagePacket = (Packet2Message) pkt;
-			broadcastToAllBut(ip, new Packet2Message(messagePacket.getMessage()));
-			this.log.log(Level.INFO, getClient(ip).getUsername() + ": " + messagePacket.getMessage());
+			broadcastToAllBut(client, new Packet2Message(client.getUsername(), messagePacket.getMessage()));
+			this.log.log(Level.INFO, client.getUsername() + ": " + messagePacket.getMessage());
 		}
 	}
 }
