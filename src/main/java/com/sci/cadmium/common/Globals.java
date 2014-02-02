@@ -27,4 +27,14 @@ public final class Globals
 	 * Server configuration file 
 	 */
 	public static final String SERVER_CONFIG = "server.cfg";
+
+	/**
+	 * Server ban list file
+	 */
+	public static final String BANS_FILE = "bans.txt";
+	
+	/**
+	 * Server ban op file
+	 */
+	public static final String OPS_FILE = "ops.txt";
 }

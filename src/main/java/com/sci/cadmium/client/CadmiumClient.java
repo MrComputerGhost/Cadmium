@@ -258,7 +258,7 @@ public final class CadmiumClient implements Runnable
 
 	public void onChatMessage(String username, String message)
 	{
-		this.chatArea.setText(this.chatArea.getText() + "\n" + username + ": " + message);
+		this.chatArea.append(username + ": " + message + "\n");
 	}
 
 	public void start()
@@ -281,8 +281,8 @@ public final class CadmiumClient implements Runnable
 			return;
 
 		sendPacket(new Packet1Disconnect(this.username));
-		this.connected = false;
 
+		this.connected = false;
 		this.disconnectMenuItem.setEnabled(this.connected);
 		this.connectMenuItem.setEnabled(!this.connected);
 		this.chatField.setEditable(this.connected);
@@ -382,7 +382,10 @@ public final class CadmiumClient implements Runnable
 			Packet3Kick packetKick = (Packet3Kick) pkt;
 
 			onChatMessage("SERVER", packetKick.getMessage());
-			disconnect();
+			this.connected = false;
+			this.disconnectMenuItem.setEnabled(this.connected);
+			this.connectMenuItem.setEnabled(!this.connected);
+			this.chatField.setEditable(this.connected);
 		}
 	}
 }

@@ -73,6 +73,16 @@ public final class StandardServer implements Server
 	private List<Client> clients;
 
 	/**
+	 * Bans file
+	 */
+	private ListFile bans;
+
+	/**
+	 * Ops file
+	 */
+	private ListFile ops;
+
+	/**
 	 * Standard Cadmium server
 	 * 
 	 * @param cadmiumHome
@@ -84,6 +94,16 @@ public final class StandardServer implements Server
 		this.log = Logger.getLogger("Cadmium");
 		this.thread = new Thread(this, "Cadmium");
 		this.clients = new ArrayList<Client>();
+
+		try
+		{
+			this.bans = new ListFile(new File(this.cadmiumHome, Globals.BANS_FILE));
+			this.ops = new ListFile(new File(this.cadmiumHome, Globals.OPS_FILE));
+		}
+		catch(IOException e)
+		{
+			this.log.log(Level.SEVERE, "An error occured creating files!", e);
+		}
 	}
 
 	@Override
@@ -163,6 +183,7 @@ public final class StandardServer implements Server
 			if(this.stopping)
 			{
 				broadcast(new Packet3Kick("Server stopping!"));
+				this.clients.clear();
 				this.running = false;
 			}
 			else
@@ -210,9 +231,9 @@ public final class StandardServer implements Server
 		return null;
 	}
 
-	public void sendPacket(Client client, Packet pkt) // TODO
-														// encrypted
-														// packets
+	public void sendPacket(InetAddress ip, int port, Packet pkt) // TODO
+	// encrypted
+	// packets
 	{
 		try
 		{
@@ -223,12 +244,17 @@ public final class StandardServer implements Server
 			pkt.write(dout);
 
 			byte[] data = baos.toByteArray();
-			this.socket.send(new DatagramPacket(data, data.length, client.getIpAddress(), client.getPort()));
+			this.socket.send(new DatagramPacket(data, data.length, ip, port));
 		}
 		catch(IOException e)
 		{
 			this.log.log(Level.WARNING, "An error occured sending packet!", e);
 		}
+	}
+
+	public void sendPacket(Client client, Packet pkt)
+	{
+		sendPacket(client.getIpAddress(), client.getPort(), pkt);
 	}
 
 	public void broadcast(Packet pkt)
@@ -256,7 +282,7 @@ public final class StandardServer implements Server
 			Packet0Connect connectPacket = (Packet0Connect) pkt;
 			if(getClient(connectPacket.getUsername()) != null)
 			{
-				sendPacket(getClient(connectPacket.getUsername()), new Packet3Kick("Username in use!"));
+				sendPacket(ip, port, new Packet3Kick("Username in use!"));
 				return;
 			}
 
@@ -266,8 +292,19 @@ public final class StandardServer implements Server
 				c.setUsername(connectPacket.getUsername());
 				c.setPort(port);
 				c.setIpAddress(ip);
+
+				if(this.bans.contains(c.getUsername()))
+				{
+					sendPacket(c, new Packet3Kick("You are banned from this server!"));
+				}
+
+				if(this.ops.contains(c.getUsername()))
+				{
+					c.setLevel(2);
+				}
+
 				this.clients.add(c);
-				broadcastToAllBut(c, new Packet2Message("SERVER", c.getUsername() + " connected!"));
+				broadcast(new Packet2Message("SERVER", c.getUsername() + " connected!"));
 				this.log.log(Level.INFO, c.getUsername() + " connected!");
 			}
 			catch(IOException e)
@@ -282,15 +319,208 @@ public final class StandardServer implements Server
 			if(c != null)
 			{
 				this.clients.remove(c);
-				broadcastToAllBut(c, new Packet2Message("SERVER", c.getUsername() + " disconnected!"));
+				broadcast(new Packet2Message("SERVER", c.getUsername() + " disconnected!"));
 				this.log.log(Level.INFO, c.getUsername() + " disconnected!");
 			}
 		}
 		else if(pkt instanceof Packet2Message) // TODO commands
 		{
 			Packet2Message messagePacket = (Packet2Message) pkt;
-			broadcastToAllBut(client, new Packet2Message(client.getUsername(), messagePacket.getMessage()));
-			this.log.log(Level.INFO, client.getUsername() + ": " + messagePacket.getMessage());
+			if(messagePacket.getMessage().startsWith("/"))
+			{
+				String[] arguments = messagePacket.getMessage().substring(1, messagePacket.getMessage().length()).split(" ");
+				handleCommand(client, arguments);
+			}
+			else
+			{
+				broadcastToAllBut(client, new Packet2Message(client.getUsername(), messagePacket.getMessage()));
+				this.log.log(Level.INFO, client.getUsername() + ": " + messagePacket.getMessage());
+			}
+		}
+	}
+
+	public void handleCommand(Client client, String[] arguments)
+	{
+		if(arguments[0].equals("op"))
+		{
+			if(client.getLevel() == 2)
+			{
+				if(arguments.length == 2)
+				{
+					if(!client.getUsername().equals(arguments[1]))
+					{
+						Client c = getClient(arguments[1]);
+						if(c != null)
+						{
+							c.setLevel(2);
+							this.ops.add(c.getUsername());
+						}
+						else
+						{
+							sendPacket(client, new Packet2Message("SERVER", "User not found!"));
+						}
+					}
+					else
+					{
+						sendPacket(client, new Packet2Message("SERVER", "You cannot op yourself!"));
+					}
+				}
+				else
+				{
+					sendPacket(client, new Packet2Message("SERVER", "Usage: /op <name>"));
+				}
+			}
+			else
+			{
+				sendPacket(client, new Packet2Message("SERVER", "You do not have permission to do that!"));
+			}
+		}
+		else if(arguments[0].equals("deop"))
+		{
+			if(client.getLevel() == 2)
+			{
+				if(arguments.length == 2)
+				{
+					if(!client.getUsername().equals(arguments[1]))
+					{
+						Client c = getClient(arguments[1]);
+						if(c != null)
+						{
+							c.setLevel(0);
+							this.ops.remove(c.getUsername());
+						}
+						else
+						{
+							sendPacket(client, new Packet2Message("SERVER", "User not found!"));
+						}
+					}
+					else
+					{
+						sendPacket(client, new Packet2Message("SERVER", "You cannot deop yourself!"));
+					}
+				}
+				else
+				{
+					sendPacket(client, new Packet2Message("SERVER", "Usage: /deop <name>"));
+				}
+			}
+			else
+			{
+				sendPacket(client, new Packet2Message("SERVER", "You do not have permission to do that!"));
+			}
+		}
+		else if(arguments[0].equals("kick"))
+		{
+			if(client.getLevel() == 2)
+			{
+				if(client.getLevel() == 2)
+				{
+					if(arguments.length == 2 || arguments.length == 3)
+					{
+						if(!client.getUsername().equals(arguments[1]))
+						{
+							Client c = getClient(arguments[1]);
+							if(c != null)
+							{
+								sendPacket(c, new Packet3Kick(arguments.length == 3 ? arguments[2] : "You were kicked from the server!"));
+								this.clients.remove(c);
+								broadcast(new Packet2Message("SERVER", c.getUsername() + " was kicked from the server!"));
+							}
+							else
+							{
+								sendPacket(client, new Packet2Message("SERVER", "User not found!"));
+							}
+						}
+						else
+						{
+							sendPacket(client, new Packet2Message("SERVER", "You cannot kick yourself!"));
+						}
+					}
+					else
+					{
+						sendPacket(client, new Packet2Message("SERVER", "Usage: /kick <name>"));
+					}
+				}
+				else
+				{
+					sendPacket(client, new Packet2Message("SERVER", "You do not have permission to do that!"));
+				}
+			}
+			else
+			{
+				sendPacket(client, new Packet2Message("SERVER", "You do not have permission to do that!"));
+			}
+		}
+		else if(arguments[0].equals("ban"))
+		{
+			if(client.getLevel() == 2)
+			{
+				if(client.getLevel() == 2)
+				{
+					if(arguments.length == 2 || arguments.length == 3)
+					{
+						if(!client.getUsername().equals(arguments[1]))
+						{
+							Client c = getClient(arguments[1]);
+							if(c != null)
+							{
+								sendPacket(c, new Packet3Kick(arguments.length == 3 ? arguments[2] : "You were banned from the server!"));
+								this.clients.remove(c);
+								broadcast(new Packet2Message("SERVER", c.getUsername() + " was banned from the server!"));
+								this.bans.add(c.getUsername());
+							}
+							else
+							{
+								sendPacket(client, new Packet2Message("SERVER", "User not found!"));
+							}
+						}
+						else
+						{
+							sendPacket(client, new Packet2Message("SERVER", "You cannot ban yourself!"));
+						}
+					}
+					else
+					{
+						sendPacket(client, new Packet2Message("SERVER", "Usage: /ban <name>"));
+					}
+				}
+				else
+				{
+					sendPacket(client, new Packet2Message("SERVER", "You do not have permission to do that!"));
+				}
+			}
+			else
+			{
+				sendPacket(client, new Packet2Message("SERVER", "You do not have permission to do that!"));
+			}
+		}
+		else if(arguments[0].equals("unban"))
+		{
+			if(client.getLevel() == 2)
+			{
+				if(arguments.length == 2)
+				{
+					if(!client.getUsername().equals(arguments[1]))
+					{
+						if(this.bans.contains(arguments[1]))
+						{
+							this.bans.remove(arguments[1]);
+						}
+					}
+					else
+					{
+						sendPacket(client, new Packet2Message("SERVER", "You cannot unban yourself!"));
+					}
+				}
+				else
+				{
+					sendPacket(client, new Packet2Message("SERVER", "Usage: /unban <name>"));
+				}
+			}
+			else
+			{
+				sendPacket(client, new Packet2Message("SERVER", "You do not have permission to do that!"));
+			}
 		}
 	}
 }

@@ -19,6 +19,11 @@ public class Client
 	private String username;
 
 	/**
+	 * Client's permission level
+	 */
+	private int level;
+
+	/**
 	 * Client's IP
 	 */
 	private InetAddress ipAddress;
@@ -36,6 +41,16 @@ public class Client
 	public Client() throws SocketException
 	{
 		this.socket = new DatagramSocket();
+	}
+
+	public int getLevel()
+	{
+		return level;
+	}
+
+	public void setLevel(int level)
+	{
+		this.level = level;
 	}
 
 	public DatagramSocket getSocket()
@@ -71,5 +86,11 @@ public class Client
 	public int getPort()
 	{
 		return port;
+	}
+
+	@Override
+	public String toString()
+	{
+		return this.username;
 	}
 }
