@@ -1,7 +1,9 @@
 package com.sci.cadmium.server;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -9,12 +11,16 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.sci.cadmium.Globals;
-import com.sci.cadmium.Server;
-import com.sci.cadmium.config.Configuration;
-import com.sci.cadmium.packet.Packet;
+import com.sci.cadmium.common.config.Configuration;
+import com.sci.cadmium.common.packet.Packet;
+import com.sci.cadmium.common.packet.Packet0Connect;
+import com.sci.cadmium.common.packet.Packet1Disconnect;
+import com.sci.cadmium.common.packet.Packet2Message;
+import com.sci.cadmium.common.packet.Packet3Kick;
 
 /**
  * Cadmium
@@ -23,7 +29,7 @@ import com.sci.cadmium.packet.Packet;
  * @license Lesser GNU Public License v3 (http://www.gnu.org/licenses/lgpl.html)
  */
 
-public class StandardServer implements Server
+public final class StandardServer implements Server
 {
 	/**
 	 * Cadmium home directory
@@ -61,6 +67,11 @@ public class StandardServer implements Server
 	private Thread thread;
 
 	/**
+	 * Clients connected to the server
+	 */
+	private List<Client> clients;
+
+	/**
 	 * Standard Cadmium server
 	 * 
 	 * @param cadmiumHome
@@ -71,6 +82,7 @@ public class StandardServer implements Server
 		this.config = new ServerConfig();
 		this.log = Logger.getLogger("Cadmium");
 		this.thread = new Thread(this, "Cadmium");
+		this.clients = new ArrayList<Client>();
 	}
 
 	@Override
@@ -149,7 +161,8 @@ public class StandardServer implements Server
 		{
 			if(this.stopping)
 			{
-
+				broadcast(new Packet3Kick("Server stopping!"));
+				this.running = false;
 			}
 			else
 			{
@@ -163,7 +176,8 @@ public class StandardServer implements Server
 					DataInputStream din = new DataInputStream(new ByteArrayInputStream(data));
 					int packetID = din.readInt();
 					Packet pkt = Packet.createPacket(packetID);
-					handlePacket(ip, pkt);
+					pkt.read(din);
+					handlePacket(ip, packet.getPort(), pkt);
 				}
 				catch(Exception e)
 				{
@@ -173,8 +187,108 @@ public class StandardServer implements Server
 		}
 	}
 
-	public void handlePacket(InetAddress ip, Packet pkt)
+	public Client getClient(String username)
 	{
+		if(username == null)
+			return null;
+		for(Client client : this.clients)
+		{
+			if(username.equals(client.getUsername()))
+				return client;
+		}
+		return null;
+	}
 
+	public Client getClient(InetAddress ip)
+	{
+		for(Client client : this.clients)
+		{
+			if(client.getIpAddress().equals(ip))
+				return client;
+		}
+		return null;
+	}
+
+	public void sendPacket(InetAddress ip, int port, Packet pkt) // TODO
+																	// encrypted
+																	// packets
+	{
+		try
+		{
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			DataOutputStream dout = new DataOutputStream(baos);
+
+			dout.writeInt(pkt.getID());
+			pkt.write(dout);
+
+			byte[] data = baos.toByteArray();
+			this.socket.send(new DatagramPacket(data, data.length, ip, port));
+		}
+		catch(IOException e)
+		{
+			this.log.log(Level.WARNING, "An error occured sending packet!", e);
+		}
+	}
+
+	public void broadcast(Packet pkt)
+	{
+		for(Client c : this.clients)
+		{
+			sendPacket(c.getIpAddress(), c.getPort(), pkt);
+		}
+	}
+
+	public void broadcastToAllBut(InetAddress toSkip, Packet pkt)
+	{
+		for(Client c : this.clients)
+		{
+			if(c.getIpAddress().equals(toSkip))
+				continue;
+			sendPacket(c.getIpAddress(), c.getPort(), pkt);
+		}
+	}
+
+	public void handlePacket(InetAddress ip, int port, Packet pkt)
+	{
+		if(pkt instanceof Packet0Connect)
+		{
+			Packet0Connect connectPacket = (Packet0Connect) pkt;
+			if(getClient(connectPacket.getUsername()) != null)
+			{
+				sendPacket(ip, getClient(connectPacket.getUsername()).getPort(), new Packet3Kick("Username in use!"));
+				return;
+			}
+
+			try
+			{
+				Client client = new Client(ip);
+				client.setUsername(connectPacket.getUsername());
+				client.setPort(port);
+				this.clients.add(client);
+				broadcastToAllBut(ip, new Packet2Message(client.getUsername() + " connected!"));
+				this.log.log(Level.INFO, client.getUsername() + " connected!");
+			}
+			catch(IOException e)
+			{
+				this.log.log(Level.WARNING, "An error occured while connecting client!", e);
+			}
+		}
+		else if(pkt instanceof Packet1Disconnect)
+		{
+			Packet1Disconnect disconnectPacket = (Packet1Disconnect) pkt;
+			Client client = getClient(disconnectPacket.getUsername());
+			if(client != null)
+			{
+				this.clients.remove(client);
+				broadcastToAllBut(ip, new Packet2Message(client.getUsername() + " disconnected!"));
+				this.log.log(Level.INFO, client.getUsername() + " disconnected!");
+			}
+		}
+		else if(pkt instanceof Packet2Message) // TODO commands
+		{
+			Packet2Message messagePacket = (Packet2Message) pkt;
+			broadcastToAllBut(ip, new Packet2Message(messagePacket.getMessage()));
+			this.log.log(Level.INFO, getClient(ip).getUsername() + ": " + messagePacket.getMessage());
+		}
 	}
 }

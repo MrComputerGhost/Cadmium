@@ -3,7 +3,7 @@ package com.sci.cadmium.server;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import com.sci.cadmium.config.ConfigProperty;
+import com.sci.cadmium.common.config.ConfigProperty;
 
 /**
  * Cadmium

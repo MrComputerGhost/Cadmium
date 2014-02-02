@@ -24,6 +24,11 @@ public class Client
 	private InetAddress ipAddress;
 
 	/**
+	 * Client's port
+	 */
+	private int port;
+
+	/**
 	 * Client's socket
 	 */
 	private DatagramSocket socket;
@@ -52,5 +57,15 @@ public class Client
 	public InetAddress getIpAddress()
 	{
 		return ipAddress;
+	}
+
+	public void setPort(int port)
+	{
+		this.port = port;
+	}
+
+	public int getPort()
+	{
+		return port;
 	}
 }
