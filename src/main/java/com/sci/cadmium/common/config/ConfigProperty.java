@@ -16,5 +16,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ConfigProperty
 {
+	/**
+	 * The config propery key
+	 * @return
+	 */
 	String key();
 }

@@ -15,14 +15,37 @@ import java.util.Map;
 
 public abstract class Packet
 {
+	/**
+	 * Map of packet id's to packet classes
+	 */
 	private static Map<Integer, Class<? extends Packet>> packets = new HashMap<Integer, Class<? extends Packet>>();
 
+	/**
+	 * ID of the packet
+	 * @return
+	 */
 	public abstract int getID();
 
+	/**
+	 * Write data to the packet
+	 * @param out
+	 * @throws IOException
+	 */
 	public abstract void write(DataOutputStream out) throws IOException;
 
+	/**
+	 * Read fata from the packet
+	 * @param in
+	 * @throws IOException
+	 */
 	public abstract void read(DataInputStream in) throws IOException;
 
+	/**
+	 * Create a packet by id
+	 * @param id
+	 * @return
+	 * @throws Exception
+	 */
 	public static Packet createPacket(int id) throws Exception
 	{
 		if(packets.get(id) == null)
@@ -30,6 +53,11 @@ public abstract class Packet
 		return packets.get(id).newInstance();
 	}
 
+	/**
+	 * Register a packet class
+	 * @param packet
+	 * @throws Exception
+	 */
 	public static void registerPacket(Class<? extends Packet> packet) throws Exception
 	{
 		Packet pkt = packet.newInstance();

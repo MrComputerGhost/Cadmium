@@ -23,8 +23,19 @@ import com.sci.cadmium.server.util.Close;
 
 public class Configuration
 {
+	/**
+	 * File of this configuration
+	 */
 	private File file;
+	
+	/**
+	 * Class this configuration loads to
+	 */
 	private Object obj;
+	
+	/**
+	 * This configuration's logger
+	 */
 	private Logger log;
 
 	public Configuration(File file, Object obj)
