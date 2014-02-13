@@ -60,13 +60,13 @@ public class ConnectDialog extends JDialog
 	public ConnectDialog(JFrame parent)
 	{
 		super(parent);
-		this.setTitle("Connect");
+		this.setTitle("Connectorz");
 		this.setResizable(false);
 		this.setSize(250, 160);
 		this.setLocationRelativeTo(null);
 		this.setLayout(null);
 
-		this.usernameLabel = new JLabel("Username:");
+		this.usernameLabel = new JLabel("Name of Zed User");
 		this.usernameLabel.setBounds(10, 10, 100, 26);
 		this.add(this.usernameLabel);
 
@@ -74,7 +74,7 @@ public class ConnectDialog extends JDialog
 		this.username.setBounds(90, 10, 150, 26);
 		this.add(this.username);
 
-		this.ipLabel = new JLabel("IP:");
+		this.ipLabel = new JLabel("Interesting Pork");
 		this.ipLabel.setBounds(10, 40, 100, 26);
 		this.add(this.ipLabel);
 
@@ -82,7 +82,7 @@ public class ConnectDialog extends JDialog
 		this.ip.setBounds(90, 40, 150, 26);
 		this.add(this.ip);
 
-		this.portLabel = new JLabel("Port:");
+		this.portLabel = new JLabel("Portal");
 		this.portLabel.setBounds(10, 70, 100, 26);
 		this.add(this.portLabel);
 
@@ -90,7 +90,7 @@ public class ConnectDialog extends JDialog
 		this.port.setBounds(90, 70, 150, 26);
 		this.add(this.port);
 
-		this.connect = new JButton("Connect");
+		this.connect = new JButton("Connectirz");
 		this.connect.setBounds(10, 100, 230, 26);
 		this.connect.addActionListener(new ActionListener()
 		{
